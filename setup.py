@@ -1,8 +1,12 @@
 import os
 
-import torch
 from setuptools import find_packages, setup
-from torch.utils.cpp_extension import BuildExtension, CppExtension, CUDAExtension
+from torch.utils.cpp_extension import (
+    BuildExtension,
+    CppExtension,
+    CUDAExtension,
+    CUDA_HOME,
+)
 
 
 CSRC_DIR = "NURBSDiff/csrc"
@@ -50,11 +54,11 @@ def cuda_extensions():
     ]
 
 
-# CPU extensions are always built. CUDA extensions are added only when the
-# installed PyTorch runtime reports CUDA availability. Set NURBSDIFF_FORCE_CPU=1
-# to explicitly request a CPU-only build on a CUDA-capable machine.
+# CPU extensions are always built. CUDA extensions are added when PyTorch can
+# locate a CUDA toolkit (CUDA_HOME), even on headless build machines without a
+# visible GPU. Set NURBSDIFF_FORCE_CPU=1 to explicitly request a CPU-only build.
 force_cpu = os.environ.get("NURBSDIFF_FORCE_CPU", "0") == "1"
-build_cuda = torch.cuda.is_available() and not force_cpu
+build_cuda = CUDA_HOME is not None and not force_cpu
 
 extensions = cpp_extensions()
 if build_cuda:

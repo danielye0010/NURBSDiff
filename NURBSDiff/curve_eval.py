@@ -29,7 +29,7 @@ torch.manual_seed(120)
 class CurveEval(torch.nn.Module):
     """Differentiable NURBS curve evaluation layer."""
 
-    def __init__(self, m, knot_v=None, dimension=3, p=2, out_dim=32, method="tc", dvc="cuda"):
+    def __init__(self, m, knot_v=None, dimension=3, p=2, out_dim=32, method="tc", dvc="cpp"):
         super(CurveEval, self).__init__()
         self.m = m
         self._dimension = dimension

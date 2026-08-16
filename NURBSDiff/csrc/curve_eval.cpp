@@ -47,7 +47,7 @@ torch::Tensor curve_forward(
     int p,
     int _dimension) {
   // This is for a batch of control points as input and predicting a batch of curves
-  auto curve = torch::zeros({ctrl_pts.size(0), u.size(0), _dimension+1}, torch::requires_grad());
+  auto curve = torch::zeros({ctrl_pts.size(0), u.size(0), _dimension+1});
   for (int k = 0; k<ctrl_pts.size(0); k++)
   {
     for (int i = 0; i<u.size(0); i++)

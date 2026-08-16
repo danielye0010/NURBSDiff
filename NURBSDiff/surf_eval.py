@@ -246,22 +246,14 @@ class SurfEvalFunc(torch.autograd.Function):
         _device = ctx._device
         surfaces = ctx.surfaces
 
-        grad_sw = torch.zeros(
-            (
-                grad_output.size(0),
-                grad_output.size(1),
-                grad_output.size(2),
-                _dimension + 1,
-            ),
-            dtype=torch.float32,
-            device=grad_output.device,
-        )
-        grad_sw[:, :, :, :_dimension] = grad_output
-
-        for d in range(_dimension):
-            grad_sw[:, :, :, _dimension] += (
-                grad_output[:, :, :, d] / surfaces[:, :, :, _dimension]
-            )
+        # Chain the Cartesian-output gradient through rational
+        # dehomogenization: S = Sw_xyz / Sw_w.
+        weights = surfaces[:, :, :, _dimension]
+        grad_sw = torch.zeros_like(surfaces)
+        grad_sw[:, :, :, :_dimension] = grad_output / weights.unsqueeze(-1)
+        grad_sw[:, :, :, _dimension] = -(
+            grad_output * surfaces[:, :, :, :_dimension]
+        ).sum(dim=-1) / (weights**2)
 
         if _device == "cuda":
             grad_ctrl_pts = cuda_backward(

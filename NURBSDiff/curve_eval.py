@@ -125,18 +125,14 @@ class CurveEvalFunc(torch.autograd.Function):
         _dimension = ctx._dimension
         curves = ctx.curves
 
-        grad_cw = torch.zeros(
-            (grad_output.size(0), grad_output.size(1), _dimension + 1),
-            dtype=torch.float32,
-        )
-        if _device == "cuda":
-            grad_cw = grad_cw.cuda()
-
-        grad_cw[:, :, :_dimension] = grad_output
-        for d in range(_dimension):
-            grad_cw[:, :, _dimension] += (
-                grad_output[:, :, d] / curves[:, :, _dimension]
-            )
+        # Chain the Cartesian-output gradient through rational
+        # dehomogenization: C = Cw_xyz / Cw_w.
+        weights = curves[:, :, _dimension]
+        grad_cw = torch.zeros_like(curves)
+        grad_cw[:, :, :_dimension] = grad_output / weights.unsqueeze(-1)
+        grad_cw[:, :, _dimension] = -(
+            grad_output * curves[:, :, :_dimension]
+        ).sum(dim=-1) / (weights**2)
 
         if _device == "cuda":
             grad_ctrl_pts = cuda_backward(

@@ -20,7 +20,7 @@ Install a PyTorch build appropriate for your operating system and, if applicable
 
 https://pytorch.org/get-started/locally/
 
-A working C++ compiler is required to build the native extensions. Building the optional CUDA extensions additionally requires a CUDA-capable PyTorch environment and CUDA build toolchain.
+A working C++ compiler is required to build the native extensions. Building the optional CUDA extensions additionally requires a CUDA-enabled PyTorch build and a CUDA toolkit discoverable by PyTorch (for example through `CUDA_HOME`).
 
 ### 2. Install NURBSDiff
 
@@ -30,9 +30,9 @@ From the repository root:
 pip install -e .
 ```
 
-The package always builds the CPU C++ evaluators. When PyTorch reports CUDA availability, the CUDA curve and surface extensions are built as well.
+The package always builds the CPU C++ evaluators. CUDA curve and surface extensions are added when PyTorch can locate a CUDA toolkit, including on headless build machines without a visible GPU.
 
-To explicitly request a CPU-only build on a CUDA-capable machine:
+To explicitly request a CPU-only build:
 
 ```bash
 NURBSDIFF_FORCE_CPU=1 pip install -e .

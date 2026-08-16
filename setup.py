@@ -54,17 +54,21 @@ def cuda_extensions():
     ]
 
 
-# CPU extensions are always built. CUDA extensions are added when PyTorch can
-# locate a CUDA toolkit (CUDA_HOME), even on headless build machines without a
-# visible GPU. Set NURBSDIFF_FORCE_CPU=1 to explicitly request a CPU-only build.
-force_cpu = os.environ.get("NURBSDIFF_FORCE_CPU", "0") == "1"
-build_cuda = CUDA_HOME is not None and not force_cpu
+# The validated CPU C++ backend is the default install path. The repository also
+# retains its legacy CUDA sources, but they are opt-in until that backend has a
+# dedicated CUDA regression environment.
+build_cuda = os.environ.get("NURBSDIFF_BUILD_EXPERIMENTAL_CUDA", "0") == "1"
+if build_cuda and CUDA_HOME is None:
+    raise RuntimeError(
+        "NURBSDIFF_BUILD_EXPERIMENTAL_CUDA=1 was requested, but CUDA_HOME "
+        "could not be located."
+    )
 
 extensions = cpp_extensions()
 if build_cuda:
     extensions.extend(cuda_extensions())
 
-print(f"Building NURBSDiff with CUDA extensions: {build_cuda}")
+print(f"Building NURBSDiff experimental CUDA extensions: {build_cuda}")
 
 setup(
     name="NURBSDiff",

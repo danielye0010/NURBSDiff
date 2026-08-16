@@ -1,47 +1,137 @@
 # NURBSDiff
-This repo contains code for fitting curves and surfaces to any input point cloud.
 
-# Requirements and Install dependencies
+NURBSDiff provides differentiable NURBS curve and surface evaluation layers for PyTorch, together with examples for fitting NURBS geometry to point-cloud and target geometry data.
 
-## Dependencies
-1. Pytorch: Installation command can be generated from [here](https://pytorch.org/get-started/locally/).
-2. Pytorch 3D:
-	* For CPU only install `pip install pytorch3d` should do
-	* For macOS running on Apple Silicon `MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ pip install "git+https://github.com/facebookresearch/pytorch3d.git"`
-	* For GPU support, we would need to install `pytorch3d` using the following process
-				```
-				TBD
-				pip install "git+https://github.com/facebookresearch/pytorch3d.git"
-				```
+The core evaluators combine PyTorch autograd with compiled C++ extensions and optional CUDA extensions.
 
-* Geomdl: `pip install geomdl`
+## Features
 
-<!-- # Installation of the package
-The following commands need to be modified to compile the code successfully, with pytorch code as well.
+- differentiable NURBS curve evaluation
+- differentiable NURBS surface evaluation
+- CPU C++ extensions
+- optional CUDA extensions
+- example workflows for NURBS surface fitting and geometry offsetting
 
+## Installation
+
+### 1. Install PyTorch
+
+Install a PyTorch build appropriate for your operating system and, if applicable, CUDA environment using the official PyTorch installation instructions:
+
+https://pytorch.org/get-started/locally/
+
+A working C++ compiler is required to build the native extensions. Building the optional CUDA extensions additionally requires a CUDA-capable PyTorch environment and CUDA build toolchain.
+
+### 2. Install NURBSDiff
+
+From the repository root:
+
+```bash
+pip install -e .
 ```
-sed -i.bak -e 's/constexpr/const/g' /c/tools/miniconda3/envs/test/lib/site-packages/torch/include/torch/csrc/jit/api/module.h
-sed -i.bak -e 's/constexpr/const/g' /c/tools/miniconda3/envs/test/lib/site-packages/torch/include/torch/csrc/jit/runtime/argument_spec.h
-sed -i.bak -e 's/return \*(this->value)/return \*((type\*)this->value)/g' /c/tools/miniconda3/envs/test/lib/site-packages/torch/include/pybind11/cast.h
+
+The package always builds the CPU C++ evaluators. When PyTorch reports CUDA availability, the CUDA curve and surface extensions are built as well.
+
+To explicitly request a CPU-only build on a CUDA-capable machine:
+
+```bash
+NURBSDIFF_FORCE_CPU=1 pip install -e .
 ```
 
-* Now proceed to run TorchNURBSEval by the following command:
-`call "%VS2017INSTALLDIR%\VC\Auxiliary\Build\vcvarsall.bat" x64 10.0.17763.0 && set DISTUTILS_USE_SDK=1 && set PY_VCRUNTIME_REDIST=No thanks && set MSSdk=1 && python setup.py develop`
-or open x64 Native Tools Command Prompt for VS2017 and run the following command from the TorchNURBSEval folder.
-`python setup.py develop`
- -->
- 
-# Usage of NURBSDiff 
+On Windows, set the same environment variable using the syntax appropriate for your shell before running `pip install -e .`.
 
-* Curve Evaluation (curve_eval.py)
-  1. The evaluation kernels for curve_eval.py are written under torch_nurbs_eval/csrc/curve_eval.cpp
-  2. To run curve_eval.py, provide input control points, input point cloud and set the number of evaluation points under out_dim in CurveEval.
-	3. To generate random distribution of control points, use data_generator.gen_control_points()
-	4. Input Size parameters:
-	    * control points : (No of curves, no of control points, [(x,y,weights) or (x,y,z,weights)] )
-	    * point cloud : (No of point clouds, no of points in point cloud,3)
-	    * Parameters to vary: degree, number of control points, number of evaluation points.
-	5. To run the curve evaluation, cd into torch_nurbs_eval.
-	6. To run `python curve_eval.py`
+## Core Usage
 
-(Will add details for Surface Fitting soon)
+### Surface evaluation on CPU
+
+```python
+from NURBSDiff.surf_eval import SurfEval
+
+surface = SurfEval(
+    m=14,
+    n=13,
+    dimension=3,
+    p=3,
+    q=3,
+    out_dim_u=128,
+    out_dim_v=128,
+    dvc="cpp",
+)
+```
+
+### Surface evaluation with CUDA
+
+If the package was built with CUDA extensions and PyTorch can access a CUDA device:
+
+```python
+surface = SurfEval(
+    m=14,
+    n=13,
+    dimension=3,
+    p=3,
+    q=3,
+    out_dim_u=128,
+    out_dim_v=128,
+    dvc="cuda",
+)
+```
+
+If `dvc="cuda"` is requested without an available CUDA extension/device, NURBSDiff raises an explicit error rather than silently switching execution back to CPU.
+
+### Curve evaluation
+
+```python
+from NURBSDiff.curve_eval import CurveEval
+
+curve = CurveEval(
+    m=8,
+    dimension=3,
+    p=2,
+    out_dim=128,
+    dvc="cpp",
+)
+```
+
+`CurveEval` retains CUDA as its historical default device setting; use `dvc="cpp"` explicitly for CPU execution.
+
+## Fitting Examples
+
+The `examples/` directory contains research scripts and geometry/data assets used for fitting and offset experiments. For example:
+
+```text
+examples/NURBSSurfaceFitting.py
+examples/DuckyNURBSSurfaceFitting.py
+examples/Surface_Offset_Aorta.py
+examples/Surface_Offset_Stabilizer.py
+```
+
+These fitting examples use additional packages beyond the core evaluator, including packages such as:
+
+- `pytorch3d`
+- `geomdl`
+- `matplotlib`
+- `tqdm`
+
+Install those dependencies according to the requirements of the example and your PyTorch/CUDA environment. PyTorch3D installation is platform- and PyTorch-version-dependent, so its official installation instructions should be used rather than assuming one universal pip command.
+
+## Repository Structure
+
+```text
+NURBSDiff/
+├── NURBSDiff/
+│   ├── curve_eval.py
+│   ├── surf_eval.py
+│   ├── nurbs_eval.py
+│   ├── utils.py
+│   └── csrc/              # C++ and CUDA extension sources
+├── examples/              # fitting/offset examples and research assets
+├── setup.py
+├── LICENSE
+└── README.md
+```
+
+## Notes
+
+- Large example assets are currently stored directly in the repository; they are preserved here to avoid changing example reproducibility as part of packaging cleanup.
+- `NURBSDiff/nurbs_eval.py` is retained as a legacy/experimental differentiable knot-vector implementation and is not the primary evaluator used by the documented examples.
+- The package includes a license file; see `LICENSE` for terms.
